@@ -16,5 +16,8 @@ namespace SCPVoiceChat
 
         [Description("Включить только для определённых SCP (если false — для всех SCP ролей).")]
         public bool OnlySpecificScps { get; set; } = true;
+
+        [Description("Язык плагина: Russian, English или Chinese")]
+        public string Language { get; set; } = "Russian";
     }
 }
