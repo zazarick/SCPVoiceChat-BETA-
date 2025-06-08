@@ -16,8 +16,6 @@ namespace SCPVoiceChat
         public override Version Version => new Version(1, 4, 2);
 
         public static Plugin Instance;
-
-        // Храним у кого активен "человеческий" режим (true) или SCP-режим (false/нет записи)
         internal Dictionary<int, bool> HumanVoiceMode = new Dictionary<int, bool>();
 
         public override void OnEnabled()
@@ -38,7 +36,6 @@ namespace SCPVoiceChat
 
         private void OnPlayerDestroying(DestroyingEventArgs ev)
         {
-            // Очищаем словарь при выходе игрока
             if (HumanVoiceMode.ContainsKey(ev.Player.Id))
                 HumanVoiceMode.Remove(ev.Player.Id);
         }
@@ -54,19 +51,12 @@ namespace SCPVoiceChat
 
             if (!isAllowedScp)
                 return;
-
-            // По умолчанию SCP говорит только с SCP, если не включен HumanVoiceMode
-            // Если HumanVoiceMode включён — разрешаем говорить с людьми (Proximity)
             bool humanMode = HumanVoiceMode.TryGetValue(ev.Player.Id, out bool enabled) && enabled;
-
-            // Если SCP и не включен человеческий режим — разрешаем только SCP канал
             if (!humanMode && ev.VoiceMessage.Channel == VoiceChatChannel.Proximity)
             {
                 ev.IsAllowed = false;
                 return;
             }
-
-            // Если SCP и включен человеческий режим — разрешаем Proximity для SCP
             if (humanMode && ev.VoiceMessage.Channel == VoiceChatChannel.Proximity)
             {
                 ev.IsAllowed = true;
