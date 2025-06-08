@@ -13,14 +13,22 @@ namespace SCPVoiceChat
         public override string Name => "SCPVoiceChat";
         public override string Author => "Zazar";
         public override string Prefix => "scpvoicechat";
-        public override Version Version => new Version(1, 4, 2);
+        public override Version Version => new Version(1, 5, 1);
 
         public static Plugin Instance;
+
+        // Храним у кого активен "человеческий" режим (true) или SCP-режим (false/нет записи)
         internal Dictionary<int, bool> HumanVoiceMode = new Dictionary<int, bool>();
 
         public override void OnEnabled()
         {
             Instance = this;
+            // Set language from config
+            if (Enum.TryParse<Translations.Language>(Config.Language, true, out var lang))
+                Translations.CurrentLanguage = lang;
+            else
+                Translations.CurrentLanguage = Translations.Language.Russian;
+
             Exiled.Events.Handlers.Player.VoiceChatting += OnVoiceChatting;
             Exiled.Events.Handlers.Player.Destroying += OnPlayerDestroying;
             base.OnEnabled();
@@ -36,6 +44,7 @@ namespace SCPVoiceChat
 
         private void OnPlayerDestroying(DestroyingEventArgs ev)
         {
+            // Очищаем словарь при выходе игрока
             if (HumanVoiceMode.ContainsKey(ev.Player.Id))
                 HumanVoiceMode.Remove(ev.Player.Id);
         }
@@ -51,12 +60,20 @@ namespace SCPVoiceChat
 
             if (!isAllowedScp)
                 return;
+
+            // По умолчанию SCP говорит только с SCP, если не включен HumanVoiceMode
+            // Если HumanVoiceMode включён — разрешаем говорить с людьми (Proximity)
             bool humanMode = HumanVoiceMode.TryGetValue(ev.Player.Id, out bool enabled) && enabled;
+
+            // Если SCP и не включен человеческий режим — запрещаем Proximity
             if (!humanMode && ev.VoiceMessage.Channel == VoiceChatChannel.Proximity)
             {
                 ev.IsAllowed = false;
+                ev.Player.ShowHint(Translations.Get("VoiceProximityDenied"), 2f);
                 return;
             }
+
+            // Если SCP и включен человеческий режим — разрешаем Proximity для SCP
             if (humanMode && ev.VoiceMessage.Channel == VoiceChatChannel.Proximity)
             {
                 ev.IsAllowed = true;
@@ -87,20 +104,20 @@ namespace SCPVoiceChat
         {
             if (!(sender is CommandSender commandSender) || !Player.TryGet(commandSender.SenderId, out Player player))
             {
-                response = "Только для игроков!";
+                response = Translations.Get("OnlyPlayers");
                 return false;
             }
 
             if (player.Role.Team != Team.SCPs)
             {
-                response = "Только SCP могут использовать эту команду!";
+                response = Translations.Get("OnlyScp");
                 return false;
             }
 
             var plugin = Plugin.Instance;
             if (plugin == null)
             {
-                response = "Плагин не инициализирован.";
+                response = Translations.Get("PluginNotInitialized");
                 return false;
             }
 
@@ -109,9 +126,9 @@ namespace SCPVoiceChat
             plugin.HumanVoiceMode[player.Id] = newMode;
 
             if (newMode)
-                response = "Теперь вы говорите с людьми через голосовой чат (Proximity).";
+                response = Translations.Get("NowHumanMode");
             else
-                response = "Теперь вы говорите только с SCP через SCP-канал.";
+                response = Translations.Get("NowSCPMode");
             return true;
         }
     }
